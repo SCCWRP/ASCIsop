@@ -19,11 +19,15 @@ Authors@R: c(
     email = "qthi.ho@gmail.com"
     )
 Remotes:
+  fawda123/Jabbrev,
   SCCWRP/ASCI
-Imports: bookdown
+Depends: 
+  here,
+  spelling
+Imports: 
+  bookdown
 Description: ASCI SOP document
 License: MIT + file LICENSE
 ByteCompile: true
 Encoding: UTF-8
 LazyData: true
-Imports: bookdown

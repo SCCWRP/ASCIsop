@@ -1,0 +1,45 @@
+---
+title: "The Algal Stream Condition Index (ASCI): instructions for calculating ASCI scores using R"
+subtitle: Southern California Coastal Water Research Project
+author:
+  - Susanna Theroux
+  - Raphael Mazor
+  - Marcus Beck
+  - Quynh-Thi Ho
+  - Shuka Rastegarpour
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+# bibliography: refs.bib
+output: 
+    bookdown::word_document2:
+      toc: true
+      fig_caption: yes
+      reference_docx: "templates/my_styles.docx" 
+---
+
+```{r, setup, echo = FALSE, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  echo = FALSE,
+  comment = "#>",
+  fig.path = "../figures/"
+)
+
+library(here)
+library(tidyverse)
+
+# # extract bib entries from online
+# Jabbrev::bib_scrp(
+#   here('ASCIsop.Rmd'),
+#   here('refs.bib'),
+#   ext_bib = 'https://raw.githubusercontent.com/fawda123/refs/master/refs.bib'
+# )
+
+# # check spelling
+# spelling::spell_check_files(here('ASCIsop.Rmd'))
+
+devtools::load_all('.', quiet = T)
+```
+
+# References
