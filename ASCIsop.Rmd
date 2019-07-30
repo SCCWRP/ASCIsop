@@ -1,6 +1,6 @@
 ---
 title: "The Algal Stream Condition Index (ASCI): instructions for calculating ASCI scores using R"
-subtitle: Southern California Coastal Water Research Project
+subtitle: Southern California Coastal Water Research Project, State Water Resources Control Board, Surface Water Ambient Monitoring Program (SWAMP)
 author:
   - Susanna Theroux
   - Raphael Mazor
@@ -22,13 +22,14 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   warning = FALSE,
   message = FALSE,
-  echo = FALSE,
+  echo = TRUE,
   comment = "#>",
   fig.path = "../figures/"
 )
 
 library(here)
 library(tidyverse)
+library(ASCI)
 
 # # extract bib entries from online
 # Jabbrev::bib_scrp(
@@ -43,6 +44,8 @@ library(tidyverse)
 devtools::load_all('.', quiet = T)
 ```
 
+SWAMP SOP #XXXX
+
 # Introduction
 
 This document describes steps in calculating the California Algal Stream Condition Index (ASCI), a bioassessment index that measures stream health based on algae (diatoms and soft-bodied algae) taxonomy data. This document describes the data input requirements and the computational steps for calculating ASCI scores using the custom ASCI R package (<https://github.com/sccwrp/asci>). Additionally, this document contains advice on interpreting scores and explanation of the quality control flags for insufficient data. The development and interpretation of the index is described in [@Therouxir].
@@ -53,16 +56,15 @@ The Algal Stream Condition Index (ASCI) was developed to provide an additional l
 
 # Software requirements
 
-Microsoft Excel (or similar) 
-R Studio 1.0.136 or R 3.3.2
+R version greater than or equal to v3.4.1 or RStudio current version
 
-This document assumes that the user is familiar with basic operations in the R programming language, such as data import, export, and manipulation. Although not required, we recommend using graphic interface for R, such as R-studio, which can be downloaded at <http://www.rstudio.com>. New users are encouraged to pursue training opportunities, such as those hosted by local R user groups. A list of such groups may be found here: <http://blog.revolutionanalytics.com/local-r-groups.html>. 
+This document assumes that the user is familiar with basic operations in the R programming language, such as data import, export, and manipulation. Although not required, we recommend using graphic interface for R, such as R-studio, which can be downloaded at <http://www.rstudio.com>. New users are encouraged to pursue training opportunities, such as those hosted by local R user groups. A list of such groups may be found here: <http://blog.revolutionanalytics.com/local-r-groups.html>.  R training material developed by SCCWRP can also be found online: <https://sccwrp.github.io/SCCWRP_R_training/>
 
 # Data requirements
 
 The ASCI calculator was designed to accept a SWAMP-format taxonomy data file in .csv format (please see example file provided with ASCI package). The following column headers are required in the input file: 
 
-```{r heads, tidy = F}
+```{r heads, tidy = F, echo = F}
 tab <- tibble(
   Field = c('StationCode', 'SampleDate', 'Replicate', 'SampleTypeCode', 'BAResult', 'Result', 'FinalID'),
   Description = c('Unique identifier of site', 'Sampling date', 'Replicate number', 'Indicates sample type. Valid values are: Integrated, Epiphyte, Macroalgae, Microalgae, and Qualitative. Integrated sample types are for diatoms, whereas other sample types are for soft-bodied algae. Qualitative sample types are not used in ASCI calculation and will be excluded from analysis.', 'Diatom count data', 'Soft-algae biovolume data', 'Must match values in SWAMP organism lookup lists (http://swamp.waterboards.ca.gov/SWAMP_Checker/XXX). A few common misspellings are recognized.')
@@ -89,7 +91,7 @@ The automated steps are as follows:
 1. Average metric scores and standardize by the mean at reference sites to generate final ASCI values. 
 1. Calculate percentile of reference distribution for each ASCI score (see Table \@ref(tab:ptils)).
 
-```{r ptils, tidy = F}
+```{r ptils, tidy = F, echo = F}
 
 tab <- tibble(
   ASCI = c('Diatoms', 'SBA', 'Hybrid'), 
@@ -107,20 +109,51 @@ knitr::kable(tab, booktabs = T, caption = cap.val)
 
 # Instructions
 
-1. Prepare input datafile, ensuring all required column headers are present (Table \@ref(tab:heads)). 
-1. Open R. Load ASCI package and tidyverse: 
-```{r, eval = F}
-# devtools::install_github('SCCWRP/ASCI')
-library(tidyverse)
-library(ASCI)
-```
-1. Run ASCI package as follows
+1. Prepare input datafile, ensuring all required column headers are present (Table \@ref(tab:heads)). This typically involves manual editing of the raw data (e.g., the spreadsheet) to match the input requirements.  Note that the R package is case-sensitive, meaning that upper and lower case letters should be exactly as shown in Table \@ref(tab:heads).
+1. Open RStudio (or R). The ASCI package lives at <https://github.com/SCCWRP/ASCI>.  To install packages from GitHub, you need to first install the devtools package. 
+    ```{r, eval = F}
+    install.packages('devtools')
+    ```
+1. Once devtools is installed, you can load it with the `library()` function and install the ASCI package with `install_github()`.
+    ```{r, eval = F}
+    library(devtools)
+    install_github('SCCWRP/ASCI')
+    ```
+1. Once the ASCI package is installed, it can be loaded with the `library()` function.
+    ```{r, warning = F, message = F}
+    library(ASCI)
+    ```
+1. A sample dataset comes with the ASCI package and can be accessed when the package is loaded.  You can view this dataset to see the required format for the calculation functions. 
+    ```{r}
+    head(demo_algae_tax)
+    ```
+1. ASCI scores can be calculated using the `ASCI()` function with the input data. Here we are showing how the function is run with the demo data.  We assign the output to a new object called `results`. 
+    ```{r}
+    results <- ASCI(demo_algae_tax)
+    ```
+1. The ASCI results are now contained in the `results` object.  We can get some information about what to do next from the `results` object.
+    ```{r}
+    results
+    ```
+1. From the text output, we can see that our `results` object includes ASCI scores for diatoms, soft-bodied algae, and hybrid indices.  We can also use the `scores()` and `Supp1_mmi()` functions to retrieve the results. 
 
 # ASCI output
 
-The ASCI output is provided in two key .csv files, one file (scores.csv) containing all scores for diatom, SBA, and hybrid ASCIs. The second file (Supp1_mmi) contains all metric score values for each individual ASCI, in addition to data quality flags. The components of each file are listed below (Tables \@ref(tab:coreout,tab:supp1,tab:supp1mets)).
+The ASCI output can be accessed using the `scores()` and `Supp1_mmi()` functions after the `ASCI()` function is run (see above).  The `scores()` function returns all scores for diatom, SBA, and hybrid ASCIs. 
 
-```{r coreout, tidy = F}
+```{r}
+scores(results)
+```
+
+The `Supp1_mmi()` function returns all metric score values for each individual ASCI, in addition to data quality flags.
+
+```{r}
+Supp1_mmi(results)
+```
+
+The components returned by the `scores()` and `supp1_mmi()` functions are listed below (Tables \@ref(tab:coreout), \@ref(tab:supp1), \@ref(tab:supp1mets)).
+
+```{r coreout, tidy = F, echo = F}
 tab <- tibble(
   Field = c('Assemblage', 'SampleID', 'ASCI_d, ASCI_sba, ASCI_hybrid', 'ASCI_d_Perc, ASCI_sba_Perc, ASCI_hybrid_Perc'),
   Description = c('Indicates index calculated, either diatoms, soft-bodied alage (sba), or hybrid', 'Unique identifier of the sample from concatenated StationCode, SamplingDate, and Replicate', 'Diatom, SBA, or hybrid ASCI score', 'The percentile of the ASCI score, relative to the reference distribution. A minimum threshold has not been established, but low values should be considered indicative of degradation.')
@@ -135,7 +168,7 @@ knitr::kable(tab, booktabs = T, caption = cap.val)
 
 # Supplemental report (`Supp1_mmi`)
 
-```{r supp1, tidy = F}
+```{r supp1, tidy = F, echo = F}
 
 tab <- tibble(
   Field = c('Assemblage', 'SampleID', 'Metric', 'Value'), 
@@ -149,7 +182,7 @@ cap.val <- 'Supp1_mmi output'
 knitr::kable(tab, booktabs = T, caption = cap.val)
 ```
 
-```{r supp1mets, tidy = F}
+```{r supp1mets, tidy = F, echo = F}
 
 tab <- tibble(
   Metric = c('cnt.spp.BCG3', 'cnt.spp.IndicatorClass_Cu_high', 'cnt.spp.IndicatorClass_DOC_high', 'cnt.spp.IndicatorClass_TP_high', 'prop.spp.most.tol', 'prop.Cyclotella', 'prop.spp.Green', 'prop.spp.IndicatorClass_Cu_high', 'prop.spp.IndicatorClass_DOC_high', 'prop.spp.IndicatorClass_TN_low', 'prop.spp.IndicatorClass_TP_low', 'prop.spp.OrgN.NHHONF', 'prop.spp.IndicatorClass_NonRef', 'prop.Surirella', 'prop.spp.OxyReq.DO_10'), 
@@ -168,7 +201,7 @@ knitr::kable(tab, booktabs = T, caption = cap.val)
 
 # Data flags
 
-```{r flgs, tidy = F}
+```{r flgs, tidy = F, echo = F}
 
 tab <- tibble(
   Flag = c('Unrecognized taxa', 'Low valve count', 'Low trait attribute value'),
