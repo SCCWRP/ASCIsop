@@ -1,13 +1,29 @@
 Package: ASCIsop
-Title: What the Package Does (One Line, Title Case)
+Title: ASCI SOP document
 Version: 0.0.0.9000
-Authors@R: 
-    person(given = "First",
-           family = "Last",
-           role = c("aut", "cre"),
-           email = "first.last@example.com")
-Description: What the package does (one paragraph)
+Authors@R: c(
+  person(given = "Susanna", family = "Theroux",
+    role = "aut", 
+    email = "susannat@sccwrp.org"
+    ),
+  person(given = "Raphael D.", family = "Mazor",
+         role = "aut", 
+         email = "raphaelm@sccwrp.org"
+    ),
+  person(given = "Marcus W.", family = "Beck",
+    role = c("aut","cre"),
+    email = "marcusb@sccwrp.org"
+    ),
+  person(given = "Quynh-Thi", family = "Ho", 
+    role = c("aut"), 
+    email = "qthi.ho@gmail.com"
+    )
+Remotes:
+  SCCWRP/ASCI
+Imports: bookdown
+Description: ASCI SOP document
 License: MIT + file LICENSE
 ByteCompile: true
 Encoding: UTF-8
 LazyData: true
+Imports: bookdown
