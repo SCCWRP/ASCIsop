@@ -18,6 +18,7 @@ Authors@R: c(
     role = c("aut"), 
     email = "qthi.ho@gmail.com"
     )
+  )
 Remotes:
   fawda123/Jabbrev,
   SCCWRP/ASCI

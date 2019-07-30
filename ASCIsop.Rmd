@@ -8,12 +8,13 @@ author:
   - Quynh-Thi Ho
   - Shuka Rastegarpour
 date: "`r format(Sys.time(), '%d %B, %Y')`"
-# bibliography: refs.bib
+bibliography: refs.bib
 output: 
     bookdown::word_document2:
       toc: true
       fig_caption: yes
-      reference_docx: "templates/my_styles.docx" 
+      reference_docx: "templates/my_styles.docx"   
+link-citations: true
 ---
 
 ```{r, setup, echo = FALSE, message = FALSE, warning = FALSE}
@@ -41,5 +42,185 @@ library(tidyverse)
 
 devtools::load_all('.', quiet = T)
 ```
+
+# Introduction
+
+This document describes steps in calculating the California Algal Stream Condition Index (ASCI), a bioassessment index that measures stream health based on algae (diatoms and soft-bodied algae) taxonomy data. This document describes the data input requirements and the computational steps for calculating ASCI scores using the custom ASCI R package (<https://github.com/sccwrp/asci>). Additionally, this document contains advice on interpreting scores and explanation of the quality control flags for insufficient data. The development and interpretation of the index is described in [@Therouxir].
+
+# Background
+
+The Algal Stream Condition Index (ASCI) was developed to provide an additional line of evidence for assessing stream biological health. The index was constructed after the California Stream Condition Index (CSCI, [@Mazor16]), leveraging a robust statewide dataset of algae taxonomy and environmental parameters. As in the CSCI development, the ASCI is calibrated using a subset of "reference" sites that are minimally-impacted by human activity. Multiple versions of the ASCI were developed and tested, including an observed versus expected (O/E) index and a multi-metric index (MMI) and a combination of both approaches. Each index was evaluated as both a traditional versus predictive approach, wherein site-specific reference-based expectations are individually selected for each test site. The strongest performing of all index variations was a traditional multi-metric index for diatom, soft-bodied algae, and hybrid assemblages. There are now three acceptable ASCIs (ASCI_d, ASCI_sba, ASCI_hybrid) for each diatom, SBA, and hybrid assemblage, respectively.
+
+# Software requirements
+
+Microsoft Excel (or similar) 
+R Studio 1.0.136 or R 3.3.2
+
+This document assumes that the user is familiar with basic operations in the R programming language, such as data import, export, and manipulation. Although not required, we recommend using graphic interface for R, such as R-studio, which can be downloaded at <http://www.rstudio.com>. New users are encouraged to pursue training opportunities, such as those hosted by local R user groups. A list of such groups may be found here: <http://blog.revolutionanalytics.com/local-r-groups.html>. 
+
+# Data requirements
+
+The ASCI calculator was designed to accept a SWAMP-format taxonomy data file in .csv format (please see example file provided with ASCI package). The following column headers are required in the input file: 
+
+```{r heads, tidy = F}
+tab <- tibble(
+  Field = c('StationCode', 'SampleDate', 'Replicate', 'SampleTypeCode', 'BAResult', 'Result', 'FinalID'),
+  Description = c('Unique identifier of site', 'Sampling date', 'Replicate number', 'Indicates sample type. Valid values are: Integrated, Epiphyte, Macroalgae, Microalgae, and Qualitative. Integrated sample types are for diatoms, whereas other sample types are for soft-bodied algae. Qualitative sample types are not used in ASCI calculation and will be excluded from analysis.', 'Diatom count data', 'Soft-algae biovolume data', 'Must match values in SWAMP organism lookup lists (http://swamp.waterboards.ca.gov/SWAMP_Checker/XXX). A few common misspellings are recognized.')
+)
+
+# table stuff
+cap.val <- 'Required field names and descriptions of data needed to calculate ASCI scores.'
+
+# table
+knitr::kable(tab, booktabs = T, caption = cap.val)
+```
+
+# Calculating the ASCI
+
+The ASCI package automates all of the necessary steps to calculate ASCI scores from properly formatted input files. It uses the algae taxonomy data to calculate metrics and final ASCI values for the diatom, soft-bodied algae, and hybrid ASCIs. Additionally, it compares the endpoints to the expectations, relative to a reference distribution. We have automated all of these steps, with the goal of minimizing demands on the user. 
+
+The automated steps are as follows: 
+
+1. Verify all necessary input fields is present. 
+1. Compare algae species names to harmonized species name list. Report any unrecognized taxa. 
+1. Convert all taxonomy data to presence/absence data. Flag samples with low diatom valve counts. Calculate percentage of taxa present with trait attribute information. 
+1. Calculate biological metrics for each of the three ASCIs. 
+1. Calculate metric scores by comparing observed metric values to ranges observed at calibration reference and high-activity sites.
+1. Average metric scores and standardize by the mean at reference sites to generate final ASCI values. 
+1. Calculate percentile of reference distribution for each ASCI score (see Table \@ref(tab:ptils)).
+
+```{r ptils, tidy = F}
+
+tab <- tibble(
+  ASCI = c('Diatoms', 'SBA', 'Hybrid'), 
+  `10th percentile of reference scores` = c(0.78, 0.82, 0.83),
+  Mean = c(0.89, 0.90, 0.90), 
+  SD = c(0.22, 0.21, 0.20)
+)
+
+# table stuff
+cap.val <- 'Reference distributions of ASCI scores.'
+
+# table
+knitr::kable(tab, booktabs = T, caption = cap.val)
+```
+
+# Instructions
+
+1. Prepare input datafile, ensuring all required column headers are present (Table \@ref(tab:heads)). 
+1. Open R. Load ASCI package and tidyverse: 
+```{r, eval = F}
+# devtools::install_github('SCCWRP/ASCI')
+library(tidyverse)
+library(ASCI)
+```
+1. Run ASCI package as follows
+
+# ASCI output
+
+The ASCI output is provided in two key .csv files, one file (scores.csv) containing all scores for diatom, SBA, and hybrid ASCIs. The second file (Supp1_mmi) contains all metric score values for each individual ASCI, in addition to data quality flags. The components of each file are listed below (Tables \@ref(tab:coreout,tab:supp1,tab:supp1mets)).
+
+```{r coreout, tidy = F}
+tab <- tibble(
+  Field = c('Assemblage', 'SampleID', 'ASCI_d, ASCI_sba, ASCI_hybrid', 'ASCI_d_Perc, ASCI_sba_Perc, ASCI_hybrid_Perc'),
+  Description = c('Indicates index calculated, either diatoms, soft-bodied alage (sba), or hybrid', 'Unique identifier of the sample from concatenated StationCode, SamplingDate, and Replicate', 'Diatom, SBA, or hybrid ASCI score', 'The percentile of the ASCI score, relative to the reference distribution. A minimum threshold has not been established, but low values should be considered indicative of degradation.')
+)
+  
+# table stuff
+cap.val <- 'Core ASCI output'
+
+# table
+knitr::kable(tab, booktabs = T, caption = cap.val)
+```
+
+# Supplemental report (`Supp1_mmi`)
+
+```{r supp1, tidy = F}
+
+tab <- tibble(
+  Field = c('Assemblage', 'SampleID', 'Metric', 'Value'), 
+  Description = c('Indicates index calculated, either diatoms, soft-bodied algae (SBA), or hybrid', 'Unique identifier of the sample from concatenated StationCode, SamplingDate, and Replicate', 'Indicates ASCI calculated', 'ASCI metric score, scaled')
+)
+
+# table stuff
+cap.val <- 'Supp1_mmi output'
+
+# table
+knitr::kable(tab, booktabs = T, caption = cap.val)
+```
+
+```{r supp1mets, tidy = F}
+
+tab <- tibble(
+  Metric = c('cnt.spp.BCG3', 'cnt.spp.IndicatorClass_Cu_high', 'cnt.spp.IndicatorClass_DOC_high', 'cnt.spp.IndicatorClass_TP_high', 'prop.spp.most.tol', 'prop.Cyclotella', 'prop.spp.Green', 'prop.spp.IndicatorClass_Cu_high', 'prop.spp.IndicatorClass_DOC_high', 'prop.spp.IndicatorClass_TN_low', 'prop.spp.IndicatorClass_TP_low', 'prop.spp.OrgN.NHHONF', 'prop.spp.IndicatorClass_NonRef', 'prop.Surirella', 'prop.spp.OxyReq.DO_10'), 
+  Description = c('Count species: BCG 3 taxa', 'Count species: high copper indicators', 'Count species: high DOC indicators', 'Count species: high total phosphorous indicators', 'Proportion species: most tolerant taxa', 'Proportion species: Cyclotella taxa', 'Proportion species: Green algae', 'Proportion species: high copper indicators', 'Proportion species: high DOC indicators', 'Proportion species: low total nitrogen indicators', 'Proportion species: low total phosphorous indicators', 'Proportion species: NHHONF (N-heterotrophic-high organic N (facultative)) taxa', 'Proportion species: non-ref indicators', 'Proportion species: Suriella taxa', 'Proportion species: taxa requiring at least 10% oxygen'),
+  Diatom = c('x', '', '', '', '', 'x', '', '', '', '', 'x', 'x', '', 'x', 'x'), 
+  SBA = c('x', 'x', 'x', 'x', 'x', '', 'x', '', '', '', '', '', 'x', '', ''),
+  Hybrid = c('x', '', '', '', '', 'x', 'x', 'x', 'x', '', 'x', '', 'x', 'x', 'x')
+)
+
+# table stuff
+cap.val <- 'Metric descriptions'
+
+# table
+knitr::kable(tab, booktabs = T, caption = cap.val)
+```
+
+# Data flags
+
+```{r flgs, tidy = F}
+
+tab <- tibble(
+  Flag = c('Unrecognized taxa', 'Low valve count', 'Low trait attribute value'),
+  Description = c('All submitted taxonomy names are compared to and harmonized with the California Standardized Taxonomic Effort (STE). This harmonization process converts ambiguous species names (e.g. Amphora sp. 2) to harmonized names (e.g. Amphora). Any species names not recognized by the STE are ignored for the calculations and reported as "unrecognized names".', 'Samples are flagged that had diatom valve counts <200', 'Samples are flagged when less than 50% of taxa present have trait attribute data available (TBD).')
+)
+
+# table stuff
+cap.val <- 'Types of flags returned.'
+
+# table
+knitr::kable(tab, booktabs = T, caption = cap.val)
+```
+
+
+# Troubleshooting and FAQ 
+
+*Bad or missing field names*
+
+All required field names must be present in input files. Please be sure to match the field names provided above. Although we have implemented scripts to make the inputs case-insensitive, we recommend conforming to the capitalizations shown above. 
+
+*Bad or missing sample type codes * 
+
+If your data are missing life stage codes or contain values that do not match acceptable values in SWAMP, the samples will not be scored. As qualitative fraction data is excluded in the ASCI analyses, a sample must contain additional field code variables to be scored. 
+
+*Bad FinalIDs*
+
+Bad FinalIDs typically result from misspellings, but occasionally occur when taxonomists do not conform to the SWAMP Master Taxa Lists (LINK). All unrecognized taxa are provided as exported information (verify). If you believe a FinalID is erroneously missing from SWAMP’s lookup lists, please contact the SWAMP help desk ([OIMA-Helpdesk@waterboards.ca.gov](mailto:OIMA-Helpdesk@waterboards.ca.gov)). If you believe a valid FinalID is inappropriately rejected by the scripts, contact Susanna Theroux at [susannat@sccwrp.org](mailto:susannat@sccwrp.org). 
+
+*Missing taxonomy data* 
+
+It is possible that all FinalIDs submitted for a sample are considered unrecognized taxa. In these instances, the ASCI calculator will not calculate an algae score. 
+
+*Do I need GIS data?*
+
+The ASCI calculator does not require site-specific GIS data. 
+
+# Cautions on Score Interpretation 
+
+*Unusual environmental settings*
+
+Most wadeable streams can be accurately scored with the ASCI (including some nonperennial streams), as long as the sampling occurred during the index period and the sampling protocol was not modified [@Ode16]. Preliminary analyses have revealed the ASCI responds to stressor gradients in both intermittent and channelized streams [@Therouxir]. However, the validity for sites from unusual environmental settings is unknown and should be reviewed on a case-by-case basis. 
+
+*Samples with low counts*
+
+Samples with low algae counts may have erroneously depressed ASCI scores. We have not established a minimum count of diatoms or SBA for validating the ASCI, but as a rule of thumb, scores that are within 10% of the specified sample size (i.e., XXX) may be used for most applications of the ASCI. Smaller counts may be appropriate for certain applications. [can we do some rough analyses to try and constrain this?]
+
+*Samples with few trait attribute data*
+
+Not all California algae taxa have available trait attribute information, and the absence of this trait attribute information can erroneously bias ASCI scores if it plagues the majority of species in a sample. The ASCI calculator provides a flag if samples have a < 50% of taxa with available trait attribute information. These samples should be reviewed on a case-by-case basis to determine if the scores are reflective of the biological condition.  
+
+*Missing SBA samples? Or no SBA in quantitative sample?*
+
+*Missing diatom samples? Or no diatoms in quantitative sample?*
 
 # References
